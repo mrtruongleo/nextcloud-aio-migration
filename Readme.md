@@ -11,7 +11,8 @@ This guide outlines the process to migrate a Nextcloud server from an old server
 
 Although the old and new servers have different architectures and operating systems, the migration is straightforward due to the similar setup of the Nextcloud installation on both servers.
 
-- Installation Method: I use a manual installation method with a Docker Compose file, rather than an all-in-one master container. This allows for separate configuration of each container. This approach is based on the official manual guide here. I use a latest.yml file and copy the content of sample.conf to the .env file, then adjust the TODO fields.
+- Installation Method: I use a manual installation method with a Docker Compose file, rather than an all-in-one master container. This allows for separate configuration of each container. This approach is based on the official manual guide here: https://github.com/nextcloud/all-in-one/blob/main/manual-install/readme.md
+- I use a latest.yml file and copy the content of sample.conf to the .env file, then adjust the TODO fields.
 - The use of this method on both servers simplifies the migration process.
 
 ### 0. Preparing
