@@ -50,7 +50,7 @@ scp -r /path/to/backup.tar.gz user@new-server-ip:/path/to/new/backup.tar.gz
 
 ### 4. Restore Docker Volumes on the New Server
 
-On the new server, restore the Docker volumes from the backup. You can use a restore script available in your repository:
+On the new server, restore the Docker volumes from the backup. You can use a restore script available in this repository:
 
 ```sh
 # Example command to restore volumes (adjust paths and volume names as needed)
