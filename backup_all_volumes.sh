@@ -1,91 +1,63 @@
-#!/bin/bash
+#!/bin/sh
 
 # Define main backup directory using an absolute path
-BACKUP_DIR="/absolute/path/to/backup" # Replace with the absolute path to your backup directory
-IMAGES_BACKUP_DIR="$BACKUP_DIR/images"
+BACKUP_DIR="/root/nextcloud-backup" # Replace with the absolute path to your backup directory
 VOLUMES_BACKUP_DIR="$BACKUP_DIR/volumes"
 
-# Create backup directories if they don't exist
-mkdir -p "$IMAGES_BACKUP_DIR"
+# Create backup directory if it doesn't exist
 mkdir -p "$VOLUMES_BACKUP_DIR"
 
-# Function to backup Docker images
-backup_images() {
-    echo "Backing up Docker images to $IMAGES_BACKUP_DIR..."
-    IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}")
+# List of volumes to backup (space-separated)
+VOLUMES_TO_BACKUP="nextcloud_aio_nextcloud nextcloud_aio_database nextcloud_aio_database_dump nextcloud_aio_redis nextcloud_aio_apache"
 
-    if [ -z "$IMAGES" ]; then
-        echo "No images found to backup."
+# Function to check if pv is installed, and install it if not
+install_pv() {
+    if ! command -v pv > /dev/null 2>&1; then
+        echo "Pipe Viewer (pv) is not installed. Installing..."
+        
+        # Detect package manager and install pv
+        if command -v apt-get > /dev/null 2>&1; then
+            apt-get install -y pv
+        elif command -v apk > /dev/null 2>&1; then
+            apk add --no-cache pv
+        elif command -v yum > /dev/null 2>&1; then
+            yum install -y pv
+        elif command -v dnf > /dev/null 2>&1; then
+            dnf install -y pv
+        else
+            echo "Package manager not found or unsupported. Please install pv manually."
+            exit 1
+        fi
+        
+        if ! command -v pv > /dev/null 2>&1; then
+            echo "Failed to install pv. Please install it manually."
+            exit 1
+        fi
+        
+        echo "pv installed successfully."
     else
-        for IMAGE in $IMAGES; do
-            IMAGE_NAME=$(echo $IMAGE | sed 's/[\/:]/_/g')  # Replace slashes and colons with underscores for filenames
-            echo "Saving image $IMAGE to $IMAGES_BACKUP_DIR/${IMAGE_NAME}.tar"
-            docker save -o "$IMAGES_BACKUP_DIR/${IMAGE_NAME}.tar" $IMAGE
-        done
+        echo "Pipe Viewer (pv) is already installed."
     fi
 }
 
-# Function to backup Docker volumes
+# Function to backup specified Docker volumes
 backup_volumes() {
-    echo "Backing up Docker volumes to $VOLUMES_BACKUP_DIR..."
-    VOLUMES=$(docker volume ls --format "{{.Name}}")
-
-    if [ -z "$VOLUMES" ]; then
-        echo "No volumes found to backup."
-    else
-        for VOLUME in $VOLUMES; do
+    echo "Backing up specified Docker volumes to $VOLUMES_BACKUP_DIR..."
+    
+    for VOLUME in $VOLUMES_TO_BACKUP; do
+        if docker volume inspect "$VOLUME" > /dev/null 2>&1; then
             echo "Backing up volume $VOLUME to $VOLUMES_BACKUP_DIR/${VOLUME}_backup.tar.gz"
-            docker run --rm -v $VOLUME:/volume -v "$VOLUMES_BACKUP_DIR":/backup busybox tar czf /backup/${VOLUME}_backup.tar.gz -C /volume .
-        done
-    fi
-}
-
-# Parse command-line options
-show_usage() {
-    echo "Usage: $0 [--images] [--volumes] [--all]"
-    echo "  --images    Backup Docker images only."
-    echo "  --volumes   Backup Docker volumes only."
-    echo "  --all       Backup both images and volumes (default)."
-    exit 1
-}
-
-# Default to backing up everything if no options are provided
-BACKUP_IMAGES=false
-BACKUP_VOLUMES=false
-
-# Check command-line arguments
-if [ $# -eq 0 ]; then
-    BACKUP_IMAGES=true
-    BACKUP_VOLUMES=true
-else
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --images)
-                BACKUP_IMAGES=true
-                ;;
-            --volumes)
-                BACKUP_VOLUMES=true
-                ;;
-            --all)
-                BACKUP_IMAGES=true
-                BACKUP_VOLUMES=true
-                ;;
-            *)
-                show_usage
-                ;;
-        esac
-        shift
+            docker run --rm -v "$VOLUME":/volume busybox tar -cf - -C /volume . | pv | gzip > "$VOLUMES_BACKUP_DIR/${VOLUME}_backup.tar.gz"
+        else
+            echo "Volume $VOLUME not found, skipping..."
+        fi
     done
-fi
+}
 
-# Perform backups based on chosen options
-# uncomment if you need to backup all images too
-# if [ "$BACKUP_IMAGES" = true ]; then
-#     backup_images
-# fi
+# Check and install pv if necessary
+install_pv
 
-if [ "$BACKUP_VOLUMES" = true ]; then
-    backup_volumes
-fi
+# Perform backup of specified volumes
+backup_volumes
 
-echo "Backup completed successfully."
+echo "Backup of specified volumes completed successfully."

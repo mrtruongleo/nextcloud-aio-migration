@@ -248,9 +248,9 @@ services:
       - TALK_PORT=${TALK_PORT}
       - INTERNAL_SECRET=${TALK_INTERNAL_SECRET}
     restart: unless-stopped
-    profiles:
-      - talk
-      - talk-recording
+    # profiles:
+    #   - talk
+    #   - talk-recording
     networks:
       - nextcloud-aio
     read_only: true
@@ -276,8 +276,8 @@ services:
       - INTERNAL_SECRET=${TALK_INTERNAL_SECRET}
     shm_size: 2147483648
     restart: unless-stopped
-    profiles:
-      - talk-recording
+    # profiles:
+    #   - talk-recording
     networks:
       - nextcloud-aio
     read_only: true
